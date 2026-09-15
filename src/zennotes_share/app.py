@@ -45,31 +45,104 @@ footer{{margin-top:3rem;color:#888;font-size:.85rem}}</style></head>
 <footer>Lien de partage ephemere. Ne pas indexer.</footer></body></html>"""
 
 ADMIN_HTML = """<!doctype html><html lang="fr"><head><meta charset="utf-8">
-<title>ZenNotes Share (admin)</title>
-<style>body{font-family:system-ui,sans-serif;max-width:52rem;margin:2rem auto;padding:0 1rem}
-input,button{font-size:1rem;padding:.4rem;margin:.2rem}table{border-collapse:collapse;width:100%}
-td,th{border:1px solid #ccc;padding:.4rem .6rem;font-size:.9rem}#app{display:none}a{word-break:break-all}</style>
-</head><body><h1>ZenNotes Share</h1>
-<div id="login"><input type="password" id="key" placeholder="Cle admin">
-<button onclick="save()">Ouvrir</button></div>
-<div id="app">
-<h2>Nouveau lien</h2>
-<input id="f_path" size="40" placeholder="quick/ma-note.md">
-<input id="f_ttl" size="8" placeholder="24 (heures)">
-<input id="f_views" size="10" placeholder="vues max (vide = infini)">
-<input id="f_pw" size="14" placeholder="mot de passe (optionnel)">
-<button onclick="create()">Creer</button>
-<p id="out"></p>
-<h2>Liens actifs</h2>
-<button onclick="refresh()">Actualiser</button>
-<table><thead><tr><th>Note</th><th>Expire</th><th>Vues</th><th></th></tr></thead>
-<tbody id="rows"></tbody></table>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZenNotes Share</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#2b2b2b;--muted:#8a8578;--accent:#4f6df5;
+--accent-d:#3d56c4;--line:#e8e2d5;--danger:#c0392b}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);
+color:var(--ink);margin:0}
+header{background:#22201b;color:#f6f4ef;padding:.9rem 1.5rem;display:flex;gap:.7rem;align-items:center}
+header .dot{width:.7rem;height:.7rem;border-radius:50%;background:var(--accent)}
+header small{color:#b9b2a2;margin-left:auto}
+main{max-width:72rem;margin:1.5rem auto;padding:0 1rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:.8rem;
+padding:1.2rem 1.4rem;margin-bottom:1.2rem;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+h2{margin:.2rem 0 1rem;font-size:1.05rem}
+.layout{display:grid;grid-template-columns:minmax(16rem,22rem) 1fr;gap:1.2rem;align-items:start}
+@media(max-width:800px){.layout{grid-template-columns:1fr}}
+input{font-size:.95rem;padding:.5rem .6rem;border:1px solid var(--line);
+border-radius:.5rem;width:100%}
+input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+button{font-size:.95rem;padding:.5rem 1rem;border:0;border-radius:.5rem;cursor:pointer;
+background:var(--accent);color:#fff}
+button:hover{background:var(--accent-d)}
+button.ghost{background:#efece3;color:var(--ink)}
+button.danger{background:#fff;color:var(--danger);border:1px solid var(--danger);padding:.3rem .7rem}
+button.danger:hover{background:var(--danger);color:#fff}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.7rem}
+.row>*{flex:1 1 8rem}
+#notelist{max-height:26rem;overflow:auto;border:1px solid var(--line);border-radius:.5rem;margin-top:.6rem}
+.note{padding:.55rem .7rem;border-bottom:1px solid var(--line);cursor:pointer}
+.note:hover{background:#f0ede4}
+.note.sel{background:#e4ebff;border-left:3px solid var(--accent)}
+.note .t{font-weight:600;font-size:.92rem;word-break:break-word}
+.note .p{color:var(--muted);font-size:.78rem;word-break:break-all}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+td,th{border-bottom:1px solid var(--line);padding:.55rem .4rem;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+a{color:var(--accent)}
+.badge{display:inline-block;font-size:.75rem;background:#efece3;border-radius:1rem;padding:.1rem .6rem}
+#toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:#22201b;
+color:#fff;padding:.6rem 1.2rem;border-radius:.6rem;display:none}
+#login{max-width:24rem;margin:6rem auto}
+.muted{color:var(--muted);font-size:.85rem}
+</style></head>
+<body><header><span class="dot"></span><strong>ZenNotes Share</strong>
+<small>liens de partage ephemeres</small></header>
+<main>
+<div class="card" id="login"><h2>Connexion</h2>
+<p class="muted">Saisis ta cle admin (conservee dans cet onglet uniquement).</p>
+<div class="row"><input type="password" id="key" placeholder="Cle admin">
+<button onclick="save()">Ouvrir</button></div></div>
+<div id="app" style="display:none">
+<div class="layout">
+<div class="card"><h2>Notes du vault</h2>
+<input id="q" placeholder="Filtrer..." oninput="filterNotes()">
+<div id="notelist"><p class="muted">Chargement...</p></div></div>
+<div>
+<div class="card"><h2>Nouveau lien</h2>
+<label class="muted">Note selectionnee</label>
+<input id="f_path" placeholder="Clique une note a gauche, ou saisis un chemin">
+<div class="row">
+<div><label class="muted">Duree (heures)</label><input id="f_ttl" value="24"></div>
+<div><label class="muted">Vues max (vide = infini)</label><input id="f_views" placeholder="infini"></div>
+<div><label class="muted">Mot de passe (optionnel)</label><input id="f_pw" placeholder="aucun"></div>
 </div>
+<div class="row"><button onclick="create()">Creer le lien</button>
+<button class="ghost" onclick="refresh()">Actualiser</button></div>
+<p id="out"></p></div>
+<div class="card"><h2>Liens actifs</h2>
+<table><thead><tr><th>Note</th><th>Expire</th><th>Vues</th><th></th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+</div></div>
+</div><div id="toast"></div>
 <script>
+let NOTES=[];
 function auth(){return {Authorization:"Bearer "+sessionStorage.getItem("sk")};}
-function save(){sessionStorage.setItem("sk",document.getElementById("key").value);
-document.getElementById("login").style.display="none";
-document.getElementById("app").style.display="block";refresh();}
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.style.display="block";
+setTimeout(()=>t.style.display="none",2200);}
+function save(){const k=document.getElementById("key").value;if(!k)return;
+sessionStorage.setItem("sk",k);document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="block";loadNotes();refresh();}
+async function loadNotes(){
+const r=await fetch("/api/notes",{headers:auth()});
+if(!r.ok){document.getElementById("notelist").innerHTML="<p class='muted'>Cle invalide.</p>";return;}
+NOTES=await r.json();renderNotes("");}
+function renderNotes(f){
+const box=document.getElementById("notelist");box.innerHTML="";f=f.toLowerCase();
+let n=0;for(const x of NOTES){
+if(f&&x.path.toLowerCase().indexOf(f)<0&&x.title.toLowerCase().indexOf(f)<0)continue;
+n++;const d=document.createElement("div");d.className="note";
+const t=document.createElement("div");t.className="t";t.textContent=x.title;
+const p=document.createElement("div");p.className="p";p.textContent=x.path;
+d.appendChild(t);d.appendChild(p);
+d.onclick=(()=>{const path=x.path,el=d;return()=>{document.getElementById("f_path").value=path;
+document.querySelectorAll(".note").forEach(e=>e.classList.remove("sel"));el.classList.add("sel");};})();
+box.appendChild(d);}
+if(!n)box.innerHTML="<p class='muted'>Aucune note.</p>";}
+function filterNotes(){renderNotes(document.getElementById("q").value);}
 async function create(){
 const body={path:document.getElementById("f_path").value,
 ttl_hours:parseInt(document.getElementById("f_ttl").value||"24",10)};
@@ -77,20 +150,32 @@ const v=document.getElementById("f_views").value;if(v)body.max_views=parseInt(v,
 const p=document.getElementById("f_pw").value;if(p)body.password=p;
 const r=await fetch("/api/links",{method:"POST",headers:Object.assign(
 {"Content-Type":"application/json"},auth()),body:JSON.stringify(body)});
-const j=await r.json();
-document.getElementById("out").innerHTML=r.ok?("Lien : <a href='"+j.url+"'>"+j.url+"</a>"):"Erreur : "+(j.detail||r.status);
+const j=await r.json();const o=document.getElementById("out");o.innerHTML="";
+if(r.ok){const a=document.createElement("a");a.href=j.url;a.target="_blank";a.textContent=j.url;
+o.appendChild(document.createTextNode("Lien : "));o.appendChild(a);o.appendChild(document.createTextNode(" "));
+const b=document.createElement("button");b.className="ghost";b.textContent="Copier";
+b.onclick=()=>{navigator.clipboard.writeText(j.url);toast("Copie !");};o.appendChild(b);}
+else o.textContent="Erreur : "+(j.detail||r.status);
 refresh();}
 async function refresh(){
 const r=await fetch("/api/links",{headers:auth()});
-if(!r.ok){document.getElementById("rows").innerHTML="<tr><td>Cle invalide</td></tr>";return;}
-const j=await r.json();const tb=document.getElementById("rows");tb.innerHTML="";
-for(const l of j){const tr=document.createElement("tr");
-tr.innerHTML="<td><a href='/s/"+l.token+"'>"+l.title+"</a></td><td>"+new Date(
-l.expires_at*1000).toLocaleString()+"</td><td>"+l.views+(l.max_views?"/"+l.max_views:"")+"</td>";
-const td=document.createElement("td");const b=document.createElement("button");
-b.textContent="Revoquer";b.onclick=((t)=>()=>revoke(t))(l.token);td.appendChild(b);
-tr.appendChild(td);tb.appendChild(tr);}}
-async function revoke(t){await fetch("/api/links/"+t,{method:"DELETE",headers:auth()});refresh();}
+const tb=document.getElementById("rows");tb.innerHTML="";
+if(!r.ok){tb.innerHTML="<tr><td>Cle invalide</td></tr>";return;}
+for(const l of await r.json()){const tr=document.createElement("tr");
+const u=location.origin+"/s/"+l.token;
+const c0=document.createElement("td");const a=document.createElement("a");
+a.href=u;a.target="_blank";a.textContent=l.title;c0.appendChild(a);
+const badge=document.createElement("span");badge.className="badge";
+badge.textContent=" "+l.views+(l.max_views?"/"+l.max_views:"/inf");c0.appendChild(badge);
+const c1=document.createElement("td");
+c1.textContent=new Date(l.expires_at*1000).toLocaleString();
+const c2=document.createElement("td");
+const cp=document.createElement("button");cp.className="ghost";cp.textContent="Copier";
+cp.onclick=(()=>{const x=u;return()=>{navigator.clipboard.writeText(x);toast("Copie !");};})();
+const rv=document.createElement("button");rv.className="danger";rv.textContent="Revoquer";
+rv.onclick=(()=>{const t=l.token;return async()=>{await fetch("/api/links/"+t,{method:"DELETE",headers:auth()});refresh();};})();
+c2.appendChild(cp);c2.appendChild(document.createTextNode(" "));c2.appendChild(rv);
+tr.appendChild(c0);tr.appendChild(c1);tr.appendChild(c2);tb.appendChild(tr);}}
 </script></body></html>"""
 
 
@@ -144,6 +229,31 @@ def create_app(store, vault_root: str, admin_token: str, public_base: str = ""):
     def api_list(authorization: str | None = Header(default=None)):
         _require_admin(authorization, admin_token)
         return [public_info(e, e["token"]) for e in list_links(store)]
+
+    @app.get("/api/notes")
+    def api_notes(authorization: str | None = Header(default=None)):
+        _require_admin(authorization, admin_token)
+        out = []
+        for dirpath, dirnames, filenames in os.walk(vault_root):
+            dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+            for fn in sorted(filenames):
+                if not fn.lower().endswith(".md"):
+                    continue
+                abs_path = os.path.join(dirpath, fn)
+                rel = os.path.relpath(abs_path, vault_root).replace(os.sep, "/")
+                try:
+                    st = os.stat(abs_path)
+                except OSError:
+                    continue
+                out.append({
+                    "path": rel,
+                    "title": fn[:-3],
+                    "folder": rel.split("/", 1)[0] if "/" in rel else "",
+                    "size": st.st_size,
+                    "updated_at": st.st_mtime,
+                })
+        out.sort(key=lambda n: n["path"].lower())
+        return out
 
     @app.delete("/api/links/{token}")
     def api_revoke(token: str, authorization: str | None = Header(default=None)):
