@@ -44,11 +44,12 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-ui);
 font-size:1rem;line-height:1.5;-webkit-text-size-adjust:100%}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.pub-wrap{max-width:40rem;width:100%;margin:0 auto;padding:1.25rem;overflow-wrap:break-word}
-@media(min-width:700px){.pub-wrap{padding:1.5rem}}
+.pub-wrap{width:80%;max-width:62rem;margin:0 auto;padding:1.25rem .5rem;overflow-wrap:break-word}
+@media(min-width:700px){.pub-wrap{padding:1.5rem .5rem}}
+@media(max-width:700px){.pub-wrap{width:92%}.topbar-in{width:92% !important}}
 .topbar{position:sticky;top:0;z-index:40;background:var(--surface);
 border-bottom:1px solid var(--border);font-size:.875rem}
-.topbar-in{max-width:40rem;margin:0 auto;padding:.5rem 1.25rem;display:flex;
+.topbar-in{width:80%;max-width:62rem;margin:0 auto;padding:.5rem .5rem;display:flex;
 gap:.6rem;align-items:center}
 .brand{display:flex;gap:.45rem;align-items:center;font-weight:700}
 .brand .dot{width:.6rem;height:.6rem;border-radius:50%;background:var(--accent)}
@@ -70,7 +71,7 @@ details.toc .toc ul{margin:.2rem 0;padding-left:1.2rem}
 details.toc .toc a{color:var(--link);text-decoration:none;line-height:2}
 details.toc .toc a:hover{text-decoration:underline}
 .pub-article{font-family:var(--font-read);font-size:1.0625rem;line-height:1.6;
-max-width:65ch;text-wrap:pretty}
+max-width:100%;text-wrap:pretty}
 .pub-article p{margin:0 0 1.1em;hyphens:auto}
 .pub-article h2,.pub-article h3{font-family:var(--font-read);line-height:1.25;
 text-wrap:balance;margin:1.8em 0 .6em}
@@ -240,7 +241,6 @@ __TOC__
 <article class="pub-article">__CONTENT__</article>
 <div class="print-only">__PRINTONLY__</div>
 </main>
-<footer class="pub-wrap pub-foot"><span>Partage via ZenNotes</span><span>__EXPIRY__</span><span class="sep"></span><button id="copylink" hidden>Copier le lien</button><label class="themebox">Theme <select id="theme"><option value="auto">Auto</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label></footer>
 <a href="#top" id="totop" hidden>Haut de page</a>
 """ + PUB_JS + """</body></html>"""
 
@@ -601,6 +601,8 @@ def create_app(store, vault_root: str, admin_token: str, public_base: str = ""):
                 + "</details>"
             )
         title = html.escape(entry["title"], quote=True)
+        if title.lower().endswith(".md"):
+            title = title[:-3]
         expiry = _fmt_dt(entry["expires_at"])
         page = _fill(
             PAGE_HTML,
