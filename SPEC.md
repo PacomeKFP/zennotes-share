@@ -41,7 +41,7 @@ Rendu : frontmatter retiré, `![[x]]` résolu vers l'asset local si le fichier e
 
 ## 5. Interface web
 
-Page unique servie à `/`, sans build (HTML et JS inline) :
+Page unique servie à `/`, sans build (HTML et JS inline). Design system complet dans `.design/FEUILLE-DE-ROUTE.md` (tokens, lecture, admin mobile-first, accessibilité) :
 
 * Écran clé : saisie de la clé admin, conservée en `sessionStorage` uniquement, envoyée en header `Authorization`.
 * Création : champ chemin (avec aide : `inbox/...`, `quick/...`), durée en heures, vues max optionnelles, mot de passe optionnel, bouton copier le lien généré.

@@ -78,6 +78,29 @@ check(
 html = render.render_markdown("# Titre\n\n<script>alert(1)</script>\n\n- [ ] tache", "/x")
 check("pas de script", "<script" not in html)
 check("titre rendu", "<h1" in html and "Titre" in html)
-check("liste rendue", "<li>" in html)
+# tasklist custom emet <li class="..."> au lieu de <li> : assoupli en "<li".
+check("liste rendue", "<li" in html)
+check(
+    "liste simple garde des li nus",
+    "<li>" in render.render_markdown("- simple\n", "/x"),
+)
+check(
+    "paragraphes conserves",
+    "<p>" in render.render_markdown("simple texte", "/x"),
+)
+check(
+    "prix non rendu en maths",
+    "$2.50" in render.render_markdown("prix $2.50 ici", "/x"),
+)
+check(
+    "dollar en code intact",
+    "$x" in render.render_markdown("voici `$x` fin", "/x"),
+)
+check(
+    "bornes display multiligne lisibles",
+    "mc^2" in render.render_markdown("$$\nE = mc^2\n$$\n", "/x"),
+)
+aligned = render.render_markdown("| a | b |\n|:--|--:|\n| 1 | 2 |\n", "/x")
+check("tableau rendu", "<table" in aligned and "table-scroll" in aligned)
 
 print(f"OK: {len(passed)} assertions")

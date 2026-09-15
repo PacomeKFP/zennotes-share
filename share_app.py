@@ -18,7 +18,13 @@ admin_secret = modal.Secret.from_name(SECRET_NAME)
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install("fastapi", "markdown", "bleach", "pygments")
+    .pip_install(
+        "fastapi",
+        "markdown>=3.7",
+        "bleach>=6.1",
+        "pygments>=2.19,<2.21",
+        "pymdown-extensions==11.0.2",
+    )
     .add_local_dir("src/zennotes_share", "/pkg/zennotes_share", copy=True)
 )
 
