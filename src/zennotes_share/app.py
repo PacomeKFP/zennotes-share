@@ -591,7 +591,7 @@ def create_app(store, vault_root: str, admin_token: str, public_base: str = ""):
             updated = _fmt_dt(os.path.getmtime(abs_path))
         except OSError:
             updated = "date inconnue"
-        article, toc = render_article(raw, vault_root)
+        article, toc = render_article(raw, vault_root, token)
         minutes = reading_time_minutes(raw)
         toc_block = ""
         if toc and count_h2(article) >= 3:

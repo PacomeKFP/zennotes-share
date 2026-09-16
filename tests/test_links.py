@@ -103,4 +103,25 @@ check(
 aligned = render.render_markdown("| a | b |\n|:--|--:|\n| 1 | 2 |\n", "/x")
 check("tableau rendu", "<table" in aligned and "table-scroll" in aligned)
 
+# --- assets et liens absolus au token ---
+import tempfile
+
+with tempfile.TemporaryDirectory() as vault:
+    os.makedirs(os.path.join(vault, "assets"))
+    with open(os.path.join(vault, "assets", "pic.png"), "wb") as f:
+        f.write(bytes.fromhex("89504e470d0a1a0a"))
+    md_emb = render.resolve_wikilinks("![[assets/pic.png]]", vault, "TOK")
+    check("embed absolu", md_emb == "![pic.png](/s/TOK/a/assets/pic.png)")
+    md_emb2 = render.resolve_wikilinks("![[assets/pic.png]]", vault)
+    check("embed relatif sans token", md_emb2 == "![pic.png](./a/assets/pic.png)")
+    html_emb = render.render_markdown("![[assets/pic.png]]", vault, "TOK")
+    check("img absolue rendue", 'src="/s/TOK/a/assets/pic.png"' in html_emb)
+    check("alt renseigne", 'alt="pic.png"' in html_emb)
+    html_rel = render.render_markdown("![logo](assets/pic.png)", vault, "TOK")
+    check("img relative reecrite en absolu", 'src="/s/TOK/a/assets/pic.png"' in html_rel)
+    html_ext = render.render_markdown("[doc](https://example.com/x)", vault, "TOK")
+    check("lien externe nouvel onglet", 'target="_blank" rel="noopener"' in html_ext)
+    html_int = render.render_markdown("[ancre](#titre)", vault, "TOK")
+    check("ancre interne intacte", 'href="#titre"' in html_int and "target" not in html_int)
+
 print(f"OK: {len(passed)} assertions")

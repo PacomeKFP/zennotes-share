@@ -116,13 +116,23 @@ def _asset_exists(vault_root: str, target: str) -> bool:
     return os.path.isfile(os.path.join(vault_root, target))
 
 
-def resolve_wikilinks(text: str, vault_root: str) -> str:
+def _asset_url(target: str, token: str | None) -> str:
+    target = target.strip().replace("\\", "/").lstrip("/")
+    if token:
+        return f"/s/{token}/a/{target}"
+    return f"./a/{target}"
+
+
+def resolve_wikilinks(
+    text: str, vault_root: str, token: str | None = None
+) -> str:
     """![[x]] -> image locale si asset connu sinon texte. [[y]] -> gras."""
 
     def _embed(m: re.Match) -> str:
         target = m.group(1).strip()
         if _asset_exists(vault_root, target):
-            return f"![](./a/{target})"
+            alt = target.rsplit("/", 1)[-1]
+            return f"![{alt}]({_asset_url(target, token)})"
         return m.group(1).strip().rsplit("/", 1)[-1]
 
     def _link(m: re.Match) -> str:
@@ -133,16 +143,28 @@ def resolve_wikilinks(text: str, vault_root: str) -> str:
     return WIKILINK_RE.sub(_link, text)
 
 
-def rewrite_relative_images(html: str) -> str:
-    """Reecrit src="assets/..." vers ./a/assets/... (laisse http et ./a)."""
+def rewrite_relative_images(html: str, token: str | None = None) -> str:
+    """Reecrit src="assets/..." vers l'URL absolue du lien (laisse http et /s/)."""
 
     def _rw(m: re.Match) -> str:
         src = m.group(1)
-        if src.startswith(("http://", "https://", "./a/", "data:", "#")):
+        if src.startswith(("http://", "https://", "/s/", "data:", "#")):
             return m.group(0)
-        return f'src="./a/{src.lstrip("/")}"'
+        if src.startswith("./a/"):
+            src = src[len("./a/"):]
+        base = f"/s/{token}/a/" if token else "./a/"
+        return f'src="{base + src.lstrip("/")}"'
 
     return re.sub(r'src="([^"]+)"', _rw, html)
+
+
+def _external_new_tab(html: str) -> str:
+    """Les liens externes s'ouvrent dans un nouvel onglet securise."""
+
+    def _rw(m: re.Match) -> str:
+        return f'<a href="{m.group(1)}"{m.group(2)} target="_blank" rel="noopener">'
+
+    return re.sub(r'<a href="(https?://[^"]+)"((?: title="[^"]*")?)>', _rw, html)
 
 
 def reading_time_minutes(text: str) -> int:
@@ -235,24 +257,29 @@ def count_h2(html: str) -> int:
     return len(H2_RE.findall(html))
 
 
-def _convert(text: str, vault_root: str) -> tuple[str, str]:
+def _convert(
+    text: str, vault_root: str, token: str | None = None
+) -> tuple[str, str]:
     """Convertit le markdown, retourne (corps HTML brut, sommaire brut)."""
-    body = resolve_wikilinks(strip_frontmatter(text), vault_root)
+    body = resolve_wikilinks(strip_frontmatter(text), vault_root, token)
     md = markdown.Markdown(
         extensions=_MD_EXTENSIONS, extension_configs=_MD_CONFIGS
     )
     raw_html = md.convert(body)
-    raw_html = rewrite_relative_images(raw_html)
+    raw_html = rewrite_relative_images(raw_html, token)
     toc_html = md.toc or ""
     if "<a " not in toc_html:
         toc_html = ""
     return raw_html, toc_html
 
 
-def render_article(text: str, vault_root: str) -> tuple[str, str]:
+def render_article(
+    text: str, vault_root: str, token: str | None = None
+) -> tuple[str, str]:
     """Rend (article assaini et enrichi, sommaire assaini)."""
-    raw_html, raw_toc = _convert(text, vault_root)
+    raw_html, raw_toc = _convert(text, vault_root, token)
     article = _sanitize(raw_html)
+    article = _external_new_tab(article)
     article = _callouts(article)
     article = _wrap_tables(article)
     article = _enhance_images(article)
@@ -261,7 +288,9 @@ def render_article(text: str, vault_root: str) -> tuple[str, str]:
     return article, toc
 
 
-def render_markdown(text: str, vault_root: str) -> str:
+def render_markdown(
+    text: str, vault_root: str, token: str | None = None
+) -> str:
     """Compatibilite : rend le corps HTML seul (sans le sommaire)."""
-    article, _ = render_article(text, vault_root)
+    article, _ = render_article(text, vault_root, token)
     return article
