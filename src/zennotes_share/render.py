@@ -49,6 +49,8 @@ ALLOWED_ATTRS = {
 FRONTMATTER_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.DOTALL)
 WIKILINK_EMBED_RE = re.compile(r"!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
 WIKILINK_RE = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
+CODE_SPAN_RE = re.compile(r"(```.*?```|`[^`\n]+`)", re.DOTALL)
+BARE_URL_RE = re.compile(r'(?<!\]\()(?<!href=")(?<!src=")(https?://[^\s<>\]")]+)')
 H2_RE = re.compile(r"<h2[\s>]")
 TABLE_OPEN_RE = re.compile(r"<table(\s[^>]*)?>")
 PRE_OPEN_RE = re.compile(r"<pre(\s[^>]*)?>")
@@ -108,6 +110,20 @@ PYGMENTS_CSS = _pygments_css()
 
 def strip_frontmatter(text: str) -> str:
     return FRONTMATTER_RE.sub("", text, count=1)
+
+
+def autolink_bare_urls(text: str) -> str:
+    """Transforme les URL nues en liens, hors blocs et spans de code."""
+
+    def _link(m: re.Match) -> str:
+        url = m.group(1).rstrip(".,;:!?")
+        trail = m.group(1)[len(url):]
+        return f"<{url}>" + trail if url else m.group(0)
+
+    parts = CODE_SPAN_RE.split(text)
+    for i in range(0, len(parts), 2):
+        parts[i] = BARE_URL_RE.sub(_link, parts[i])
+    return "".join(parts)
 
 
 def _asset_exists(vault_root: str, target: str) -> bool:
@@ -264,6 +280,7 @@ def _convert(
 ) -> tuple[str, str]:
     """Convertit le markdown, retourne (corps HTML brut, sommaire brut)."""
     body = resolve_wikilinks(strip_frontmatter(text), vault_root, token)
+    body = autolink_bare_urls(body)
     md = markdown.Markdown(
         extensions=_MD_EXTENSIONS, extension_configs=_MD_CONFIGS
     )

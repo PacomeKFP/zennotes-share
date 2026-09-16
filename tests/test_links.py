@@ -127,5 +127,12 @@ with tempfile.TemporaryDirectory() as vault:
         f.write(bytes.fromhex("89504e470d0a1a0a"))
     html_sp = render.render_markdown("![[assets/raw 3.webp]]", vault, "TOK")
     check("espace encode", 'src="/s/TOK/a/assets/raw%203.webp"' in html_sp)
+    html_bare = render.render_markdown("voir (https://example.com/a/b).", vault, "TOK")
+    check("url nue liee", '<a href="https://example.com/a/b"' in html_bare)
+    check("ponctuation hors lien", "</a>)." in html_bare)
+    html_code = render.render_markdown("lance `curl https://example.com/x` vite", vault, "TOK")
+    check("url en code intacte", "<code>" in html_code and "<a href" not in html_code)
+    html_md = render.render_markdown("[deja](https://example.com/y)", vault, "TOK")
+    check("lien markdown unique", html_md.count("https://example.com/y") == 2)
 
 print(f"OK: {len(passed)} assertions")
