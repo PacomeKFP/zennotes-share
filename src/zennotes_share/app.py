@@ -5,6 +5,11 @@ from __future__ import annotations
 import html
 import mimetypes
 import os
+
+# Types modernes absents de /etc/mime.types sur debian-slim.
+for _ext, _mime in ((".webp", "image/webp"), (".avif", "image/avif"),
+                    (".heic", "image/heic"), (".heif", "image/heif")):
+    mimetypes.add_type(_mime, _ext)
 from datetime import datetime
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
