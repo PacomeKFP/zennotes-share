@@ -133,6 +133,6 @@ with tempfile.TemporaryDirectory() as vault:
     html_code = render.render_markdown("lance `curl https://example.com/x` vite", vault, "TOK")
     check("url en code intacte", "<code>" in html_code and "<a href" not in html_code)
     html_md = render.render_markdown("[deja](https://example.com/y)", vault, "TOK")
-    check("lien markdown unique", html_md.count("https://example.com/y") == 2)
+    check("lien markdown unique", html_md.count("https://example.com/y") == 1)
 
 print(f"OK: {len(passed)} assertions")
