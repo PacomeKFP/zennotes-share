@@ -123,5 +123,9 @@ with tempfile.TemporaryDirectory() as vault:
     check("lien externe nouvel onglet", 'target="_blank" rel="noopener"' in html_ext)
     html_int = render.render_markdown("[ancre](#titre)", vault, "TOK")
     check("ancre interne intacte", 'href="#titre"' in html_int and "target" not in html_int)
+    with open(os.path.join(vault, "assets", "raw 3.webp"), "wb") as f:
+        f.write(bytes.fromhex("89504e470d0a1a0a"))
+    html_sp = render.render_markdown("![[assets/raw 3.webp]]", vault, "TOK")
+    check("espace encode", 'src="/s/TOK/a/assets/raw%203.webp"' in html_sp)
 
 print(f"OK: {len(passed)} assertions")

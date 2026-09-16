@@ -14,6 +14,7 @@ import re
 
 import bleach
 import markdown
+from urllib.parse import quote
 from pygments.formatters import HtmlFormatter
 from pymdownx import slugs
 
@@ -119,7 +120,8 @@ def _asset_exists(vault_root: str, target: str) -> bool:
 def _asset_url(target: str, token: str | None) -> str:
     target = target.strip().replace("\\", "/").lstrip("/")
     if token:
-        return f"/s/{token}/a/{target}"
+        quoted = "/".join(quote(seg) for seg in target.split("/"))
+        return f"/s/{token}/a/{quoted}"
     return f"./a/{target}"
 
 
@@ -153,7 +155,7 @@ def rewrite_relative_images(html: str, token: str | None = None) -> str:
         if src.startswith("./a/"):
             src = src[len("./a/"):]
         base = f"/s/{token}/a/" if token else "./a/"
-        return f'src="{base + src.lstrip("/")}"'
+        return f'src="{base + quote(src.lstrip("/"), safe="/%")}"'
 
     return re.sub(r'src="([^"]+)"', _rw, html)
 
